@@ -13,5 +13,6 @@ class Display:
         print ' ', ' '.join(str(i) for i in range(self.m))
         for r in range(self.n):
             print r, ' '.join(str(x) for x in self.view[r])
+        print
         # for r in range(self.n):
         #     print r, ' '.join(str(x) for x in self.board[r])

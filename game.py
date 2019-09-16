@@ -15,12 +15,12 @@ import time
 from display import Display
 
 # board states
-MINE = 'm'
+MINE = 'M'
 EMPTY = 0
 
 # player states
 UNDISCOVERED = 'u'
-FLAG = 'f'
+FLAG = 'F'
 
 class Game:
     def __init__(self, n, m, mineCount):
@@ -31,12 +31,15 @@ class Game:
 
         self.display = Display(self.board, self.view)
 
+        self.gameOver = False
+
     def start(self):
         self.initialize()
-        while not self.isOver():
+        while not self.gameOver:
             self.input()
             self.update()
             self.display.display()
+        print 'Game Over!'
 
     def initialize(self):
         self._generateTopography()
@@ -65,13 +68,16 @@ class Game:
         ee = self.END_RE.match(command)
 
         if f:
-            print 'flag'
+            r, c = (int(x) for x in f.groups())
+            self.doFlag(r, c)
         elif p:
-            print 'play'
+            r, c = (int(x) for x in p.groups())
+            self.doPlay(r, c)
         elif e:
-            print 'expand'
+            r, c = (int(x) for x in e.groups())
+            self.doExpand(r, c)
         elif ee:
-            print 'end'
+            self.doEnd()
 
     def _generateTopography(self):
         indices = range(self.n * self.m)
@@ -82,44 +88,44 @@ class Game:
         for r, c in mineLocations:
             self.board[r][c] = MINE
             # update topography around mine
-            for i in range(-1, 2):
-                for j in range(-1, 2):
-                    if i == j == 0:
-                        continue
-                    elif not self._inBounds(r + i, c + j):
-                        continue
-                    elif self.board[r + i][c + j] is MINE:
-                        continue
-                    self.board[r + i][c + j] += 1
+            for r2, c2 in self._neighbors(r, c):
+                if self.board[r2][c2] is MINE:
+                    continue
+                self.board[r2][c2] += 1
 
     def _inBounds(self, r, c):
         return 0 <= r < self.n and 0 <= c < self.m
 
-    def isOver(self):
-        return False
+    def _neighbors(self, r, c):
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                if i == j == 0:
+                    continue
+                elif not self._inBounds(r + i, c + j):
+                    continue
+                yield r + i, c + j
 
     # === PLAYER ACTIONS ===
 
     def doFlag(self, r, c):
-        self.view[r][c] = FLAG
+        if self.view[r][c] is UNDISCOVERED:
+            self.view[r][c] = FLAG
 
     def doPlay(self, r, c):
-        '''
-        1. Reveal the current square, if not revealed.
-        2. If blow up, you lose.
-        3. Otherwise, if is 0, run expand on the current square.
-        '''
-        visited = set()
+        self._reveal(r, c)
 
     def doExpand(self, r, c):
         '''
         1. Check the number of mines and flags around this square and compare
         with the number on this square. If match, reveal this square.
         '''
-        # 1. for each square around square, see if satisfy.
-        # 1.5. if satisfy, "expand"
-        #
-        pass
+        if self.view[r][c] is UNDISCOVERED:
+            return
+        flagCount = sum(
+            self.view[r2][c2] is FLAG for r2, c2 in self._neighbors(r, c))
+        if flagCount == self.view[r][c]:
+            for r2, c2 in self._neighbors(r, c):
+                self._reveal(r2, c2)
 
     def _reveal(self, r, c):
         '''
@@ -130,14 +136,19 @@ class Game:
         2. If bomb, you die.
         3. If 0, recursively reveal surrounding squares.
         '''
+        if self.view[r][c] is not UNDISCOVERED:
+            return
         value = self.board[r][c]
+        self.view[r][c] = value
+        if value is MINE:
+            self.gameOver = True
+            return
         if value is EMPTY:
-            pass
-
-        visited = set()
+            for r2, c2 in self._neighbors(r, c):
+                self._reveal(r2, c2)
 
     def doEnd(self):
-        pass
+        self.gameOver = True
 
 if __name__ == '__main__':
     game = Game(10, 10, 10)
