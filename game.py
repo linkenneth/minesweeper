@@ -1,13 +1,3 @@
-'''
-TODO:
--- implement board, player view and display of player view
--- implement game loop
--- initialize with mines
--- victory
--- fail
--- auto-expand
-'''
-
 import random
 import re
 import time
@@ -31,6 +21,7 @@ class Game:
 
         self.display = Display(self.board, self.view)
 
+        self.revealedCount = 0
         self.gameOver = False
 
     def start(self):
@@ -39,13 +30,17 @@ class Game:
             self.input()
             self.update()
             self.display.display()
-        print 'Game Over!'
+        if self.revealedCount == self.n * self.m - self.mineCount:
+            print 'Game Over! You win!'
+        else:
+            print 'Game Over! You blew up!'
 
     def initialize(self):
         self._generateTopography()
 
     def update(self):
-        pass
+        if self.revealedCount == self.n * self.m - self.mineCount:
+            self.gameOver = True
 
     FLAG_RE = re.compile(r'^[fF][lag]*\s*(\d+)\s*,?\s*(\d+)\s*$')
     PLAY_RE = re.compile(r'^[pP][lay]*\s*(\d+)\s*,?\s*(\d+)\s*$')
@@ -143,6 +138,7 @@ class Game:
         if value is MINE:
             self.gameOver = True
             return
+        self.revealedCount += 1
         if value is EMPTY:
             for r2, c2 in self._neighbors(r, c):
                 self._reveal(r2, c2)
